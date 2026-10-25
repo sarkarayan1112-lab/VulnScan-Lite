@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VulnScan Lite</title>
+<style>
+  body { font-family: Arial, sans-serif; background: #0f172a; color: #e2e8f0; margin: 0; }
+  .banner { background: #b45309; color: #fff; text-align: center; padding: 12px; font-weight: bold; }
+  .container { max-width: 800px; margin: 30px auto; padding: 0 16px; }
+  h1 { text-align: center; margin-bottom: 4px; }
+  .sub { text-align: center; color: #94a3b8; margin-bottom: 24px; }
+  .form { display: flex; gap: 8px; }
+  input { flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #334155; background: #1e293b; color: #fff; font-size: 16px; }
+  button { padding: 12px 22px; border: 0; border-radius: 8px; background: #3b82f6; color: #fff; font-size: 16px; cursor: pointer; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .card { background: #1e293b; border-radius: 12px; padding: 20px; margin-top: 20px; }
+  .status { text-align: center; margin-top: 20px; color: #fbbf24; }
+  .gauge { text-align: center; }
+  .gauge-text { font-size: 15px; color: #94a3b8; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 8px; border-bottom: 1px solid #334155; text-align: left; vertical-align: top; }
+  .pass { color: #22c55e; font-weight: bold; }
+  .fail { color: #ef4444; font-weight: bold; }
+  .fix { color: #fbbf24; font-size: 14px; margin-top: 4px; }
+  h2 { margin-top: 0; font-size: 18px; }
+</style>
+</head>
+<body>
+  <div class="banner">Only scan websites you own. This tool performs passive analysis only.</div>
+
+  <div class="container">
+    <h1>VulnScan Lite</h1>
+    <div class="sub">On-demand web security health check</div>
+
+    <div class="form">
+      <input id="url" type="text" placeholder="Enter website, e.g. myblog.com">
+      <button id="btn" onclick="startScan()">Scan</button>
+    </div>
+
+    <div id="status" class="status"></div>
+    <div id="result"></div>
+  </div>
+
+<script>
+  const SECTION_NAMES = {
+    headers: "Security Headers",
+    ssl: "SSL / TLS",
+    cms: "CMS & Server Information"
+  };
+
+  function el(tag, text, cls) {
+    const e = document.createElement(tag);
+    if (text !== undefined) e.textContent = text;
+    if (cls) e.className = cls;
+    return e;
+  }
+
+  function setStatus(msg) {
+    document.getElementById("status").textContent = msg;
+  }
+
+  async function startScan() {
+    const url = document.getElementById("url").value.trim();
+    if (!url) return;
+    const btn = document.getElementById("btn");
+    btn.disabled = true;
+    document.getElementById("result").textContent = "";
+    setStatus("Starting scan...");
+
+    try {
+      const res = await fetch("/api/scan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: url })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setStatus(data.error || "Something went wrong.");
+        btn.disabled = false;
+        return;
+      }
+      poll(data.job_id);
+    } catch (e) {
+      setStatus("Could not reach the server.");
+      btn.disabled = false;
+    }
+  }
+
+  function poll(jobId) {
+    const timer = setInterval(async () => {
+      try {
+        const res = await fetch("/api/scan/" + jobId + "/status");
+        const data = await res.json();
+        if (!res.ok) {
+          clearInterval(timer);
+          setStatus(data.error || "Scan failed.");
+          document.getElementById("btn").disabled = false;
+          return;
+        }
+        if (data.status === "completed") {
+          clearInterval(timer);
+          setStatus("");
+          showResult(data.result);
+          document.getElementById("btn").disabled = false;
+        } else {
+          setStatus("Scanning... (" + data.status + ")");
+        }
+      } catch (e) {
+        clearInterval(timer);
+        setStatus("Lost connection to the server.");
+        document.getElementById("btn").disabled = false;
+      }
+    }, 2000);
+  }
+
+  function showResult(r) {
+    const box = document.getElementById("result");
+    box.textContent = "";
+
+    // Gauge chart
+    const arcLength = 251.3;
+    const filled = (r.score / 100) * arcLength;
+    const color = r.score >= 80 ? "#22c55e" : r.score >= 50 ? "#f59e0b" : "#ef4444";
+    const gaugeCard = el("div", undefined, "card gauge");
+    gaugeCard.innerHTML =
+      '<svg viewBox="0 0 200 120" width="260">' +
+      '<path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="#334155" stroke-width="16" stroke-linecap="round"/>' +
+      '<path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="' + color + '" stroke-width="16" stroke-linecap="round" stroke-dasharray="' + filled + ' ' + arcLength + '"/>' +
+      '<text x="100" y="85" text-anchor="middle" font-size="36" font-weight="bold" fill="' + color + '">' + r.grade + '</text>' +
+      '<text x="100" y="108" text-anchor="middle" font-size="14" fill="#94a3b8">' + r.score + ' / 100</text>' +
+      '</svg>';
+    gaugeCard.appendChild(el("div", "Target: " + r.target + " | " + r.passed_checks + " of " + r.total_checks + " checks passed", "gauge-text"));
+    box.appendChild(gaugeCard);
+
+    // Detail tables
+    Object.keys(r.details).forEach(function (key) {
+      const card = el("div", undefined, "card");
+      card.appendChild(el("h2", SECTION_NAMES[key] || key));
+      const table = el("table");
+      const head = el("tr");
+      head.appendChild(el("th", "Check"));
+      head.appendChild(el("th", "Result"));
+      table.appendChild(head);
+
+      r.details[key].results.forEach(function (item) {
+        const row = el("tr");
+        const first = el("td", item.check);
+        if (!item.passed && item.fix) {
+          first.appendChild(el("div", "How to fix: " + item.fix, "fix"));
+        }
+        row.appendChild(first);
+        row.appendChild(el("td", item.passed ? "PASSED" : "FAILED", item.passed ? "pass" : "fail"));
+        table.appendChild(row);
+      });
+
+      card.appendChild(table);
+      box.appendChild(card);
+    });
+  }
+
+  document.getElementById("url").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") startScan();
+  });
+</script>
+</body>
+</html>

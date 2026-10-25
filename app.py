@@ -4,7 +4,7 @@ import threading
 import uuid
 from urllib.parse import urlparse
 
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, render_template, request
 
 from scanner.cms import check_cms
 from scanner.headers import check_headers
@@ -88,7 +88,7 @@ def run_scan(job_id, target):
 
 @app.route("/")
 def home():
-    return "VulnScan Lite is running. Only scan websites you own. This tool performs passive analysis only."
+    return render_template("index.html")
 
 
 @app.route("/api/scan", methods=["POST"])
