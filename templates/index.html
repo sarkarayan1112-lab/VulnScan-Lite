@@ -4,52 +4,133 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VulnScan Lite</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&family=Hanken+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-  body { font-family: Arial, sans-serif; background: #0f172a; color: #e2e8f0; margin: 0; }
-  .banner { background: #b45309; color: #fff; text-align: center; padding: 12px; font-weight: bold; }
-  .container { max-width: 800px; margin: 30px auto; padding: 0 16px; }
-  h1 { text-align: center; margin-bottom: 4px; }
-  .sub { text-align: center; color: #94a3b8; margin-bottom: 24px; }
-  .form { display: flex; gap: 8px; }
-  input { flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #334155; background: #1e293b; color: #fff; font-size: 16px; }
-  button { padding: 12px 22px; border: 0; border-radius: 8px; background: #3b82f6; color: #fff; font-size: 16px; cursor: pointer; }
-  button:disabled { opacity: 0.5; cursor: not-allowed; }
-  .card { background: #1e293b; border-radius: 12px; padding: 20px; margin-top: 20px; }
-  .status { text-align: center; margin-top: 20px; color: #fbbf24; }
-  .gauge { text-align: center; }
-  .gauge-text { font-size: 15px; color: #94a3b8; }
-  table { width: 100%; border-collapse: collapse; }
-  th, td { padding: 8px; border-bottom: 1px solid #334155; text-align: left; vertical-align: top; }
-  .pass { color: #22c55e; font-weight: bold; }
-  .fail { color: #ef4444; font-weight: bold; }
-  .fix { color: #fbbf24; font-size: 14px; margin-top: 4px; }
-  h2 { margin-top: 0; font-size: 18px; }
-  .dl { display: inline-block; margin-top: 14px; padding: 10px 18px; background: #22c55e; color: #0f172a; border-radius: 8px; text-decoration: none; font-weight: bold; }
+  :root { --abyss:#050f16; --trench:#0b2230; --kelp:#12384a; --mint:#5eead4; --coral:#ff6b57; --amber:#ffc46b; --sand:#e9e5d6; --mist:#8fa7b3; }
+  * { box-sizing: border-box; }
+  body { margin:0; min-height:100vh; color:var(--sand); font-family:'Hanken Grotesk',system-ui,sans-serif; overflow-x:hidden;
+         background: radial-gradient(ellipse at 50% -10%, #10405a 0%, var(--abyss) 65%) fixed; }
+
+  /* floating bubbles */
+  .bubble { position:fixed; bottom:-40px; border-radius:50%; border:1px solid rgba(94,234,212,.25); background:rgba(94,234,212,.05);
+            animation: rise linear infinite; pointer-events:none; z-index:0; }
+  @keyframes rise { to { transform: translateY(-115vh) translateX(30px); opacity:0; } }
+
+  .banner { position:relative; z-index:2; display:flex; gap:10px; align-items:center; justify-content:center; padding:10px 16px;
+            background:rgba(255,196,107,.12); border-bottom:1px solid rgba(255,196,107,.35); color:var(--amber); font-weight:600; font-size:14px; text-align:center; }
+  .dot { width:8px; height:8px; border-radius:50%; background:var(--amber); animation: blink 1.6s infinite; flex:none; }
+  @keyframes blink { 50% { opacity:.25; transform:scale(.7); } }
+
+  .wrap { position:relative; z-index:1; max-width:820px; margin:0 auto; padding:0 18px 80px; }
+
+  /* hero + sonar */
+  .hero { position:relative; text-align:center; padding:70px 0 30px; }
+  .sonar { position:absolute; left:50%; top:50%; width:560px; height:560px; max-width:130vw; transform:translate(-50%,-50%); z-index:-1;
+           -webkit-mask-image: radial-gradient(circle, #000 25%, transparent 70%); mask-image: radial-gradient(circle, #000 25%, transparent 70%); }
+  .ring { position:absolute; inset:0; border-radius:50%; border:1px solid rgba(94,234,212,.35); animation: ping 6s ease-out infinite; }
+  .ring:nth-child(2){ animation-delay:2s; } .ring:nth-child(3){ animation-delay:4s; }
+  @keyframes ping { from { transform:scale(.15); opacity:.9; } to { transform:scale(1); opacity:0; } }
+  .sweep { position:absolute; inset:0; border-radius:50%; background: conic-gradient(from 0deg, rgba(94,234,212,0) 0deg, rgba(94,234,212,.38) 70deg, rgba(94,234,212,0) 71deg);
+           animation: spin 7s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  body.scanning .sweep { animation-duration:1.4s; }
+  body.scanning .ring { animation-duration:2.2s; border-color:rgba(94,234,212,.6); }
+  .blip { position:absolute; width:10px; height:10px; border-radius:50%; background:var(--mint); box-shadow:0 0 14px var(--mint); opacity:0; }
+  body.scanning .blip { animation: blip 2.4s ease-in-out infinite; }
+  .blip:nth-of-type(5){ top:30%; left:62%; } .blip:nth-of-type(6){ top:58%; left:30%; animation-delay:.8s; } .blip:nth-of-type(7){ top:68%; left:66%; animation-delay:1.6s; }
+  @keyframes blip { 0%,100% { opacity:0; transform:scale(.4); } 40% { opacity:1; transform:scale(1.4); } }
+
+  h1 { margin:0; font-family:'Bricolage Grotesque',sans-serif; font-weight:800; font-size:clamp(40px,8vw,72px); letter-spacing:-1.5px; line-height:1;
+       background: linear-gradient(100deg, var(--sand), var(--mint), var(--sand), var(--mint)); background-size:300% 100%;
+       -webkit-background-clip:text; background-clip:text; color:transparent; animation: flow 8s linear infinite; }
+  @keyframes flow { to { background-position:300% 0; } }
+  .sub { margin:14px 0 0; color:var(--mist); font-size:18px; }
+
+  /* search */
+  .form { display:flex; gap:8px; margin-top:34px; padding:8px; border-radius:999px; background:rgba(11,34,48,.75); backdrop-filter:blur(10px);
+          border:1px solid rgba(94,234,212,.25); transition: box-shadow .3s, border-color .3s; }
+  .form:focus-within { border-color:var(--mint); box-shadow:0 0 0 4px rgba(94,234,212,.15), 0 0 40px rgba(94,234,212,.2); }
+  input { flex:1; min-width:0; padding:14px 20px; border:0; outline:0; background:transparent; color:var(--sand); font:500 17px 'Hanken Grotesk',sans-serif; }
+  input::placeholder { color:#5d7886; }
+  button { position:relative; overflow:hidden; padding:0 30px; border:0; border-radius:999px; cursor:pointer; font:700 16px 'Hanken Grotesk',sans-serif;
+           color:#04211d; background:linear-gradient(135deg,var(--mint),#2dd4bf); transition: transform .2s, box-shadow .2s; }
+  button::after { content:""; position:absolute; top:0; left:-80%; width:50%; height:100%; background:linear-gradient(100deg,transparent,rgba(255,255,255,.55),transparent); transform:skewX(-20deg); }
+  button:hover:not(:disabled) { transform:translateY(-2px); box-shadow:0 8px 24px rgba(94,234,212,.4); }
+  button:hover:not(:disabled)::after { left:140%; transition:left .7s; }
+  button:disabled { opacity:.6; cursor:progress; }
+
+  .status { min-height:30px; margin-top:22px; text-align:center; color:var(--mint); font-weight:500; }
+  .status.err { color:var(--coral); }
+  .status .msg { display:inline-block; animation: swap .5s ease; }
+  @keyframes swap { from { opacity:0; transform:translateY(8px); } }
+
+  /* cards */
+  .card { margin-top:18px; padding:22px 24px; border-radius:22px; background:rgba(11,34,48,.7); backdrop-filter:blur(10px);
+          border:1px solid rgba(143,167,179,.18); transition: border-color .3s, box-shadow .3s, transform .3s; }
+  .card:hover { border-color:rgba(94,234,212,.4); box-shadow:0 10px 40px rgba(94,234,212,.08); }
+  .reveal { animation: reveal .7s cubic-bezier(.2,.8,.2,1) both; }
+  @keyframes reveal { from { opacity:0; transform:translateY(26px) scale(.98); } }
+
+  .gaugecard { text-align:center; padding-bottom:26px; }
+  .gsvg { width:min(320px,80%); overflow:visible; }
+  .garc { transition: stroke-dashoffset 1.8s cubic-bezier(.2,.8,.2,1); filter: drop-shadow(0 0 8px currentColor); }
+  .grade { font:800 46px 'Bricolage Grotesque',sans-serif; animation: pop .8s .9s cubic-bezier(.3,1.6,.5,1) both; transform-origin:100px 76px; }
+  @keyframes pop { from { opacity:0; transform:scale(.3); } }
+  .meta { color:var(--mist); font-size:15px; margin-top:4px; }
+  .dl { display:inline-flex; align-items:center; gap:8px; margin-top:18px; padding:12px 22px; border-radius:999px; text-decoration:none; font-weight:700; color:var(--sand);
+        border:1px solid rgba(94,234,212,.5); transition: background .25s, transform .25s; }
+  .dl:hover { background:rgba(94,234,212,.15); transform:translateY(-2px); }
+  .dl svg { animation: bob 1.8s ease-in-out infinite; }
+  @keyframes bob { 50% { transform:translateY(3px); } }
+
+  .head { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+  h2 { margin:0; font:700 20px 'Bricolage Grotesque',sans-serif; }
+  .chip { padding:4px 12px; border-radius:999px; font-size:13px; font-weight:600; background:rgba(94,234,212,.12); color:var(--mint); }
+  .chip.bad { background:rgba(255,107,87,.14); color:var(--coral); }
+
+  .row { display:flex; gap:14px; padding:13px 0; border-top:1px solid rgba(143,167,179,.14); animation: reveal .5s both; }
+  .ico { flex:none; width:26px; height:26px; border-radius:50%; display:grid; place-items:center; font-weight:800; font-size:14px; }
+  .ico.ok { background:rgba(94,234,212,.16); color:var(--mint); }
+  .ico.no { background:rgba(255,107,87,.18); color:var(--coral); animation: throb 2s infinite; }
+  @keyframes throb { 0%,100% { box-shadow:0 0 0 0 rgba(255,107,87,.5); } 50% { box-shadow:0 0 0 8px rgba(255,107,87,0); } }
+  .rname { font-weight:600; }
+  .fix { margin-top:8px; padding:10px 14px; border-left:3px solid var(--amber); border-radius:0 10px 10px 0; background:rgba(255,196,107,.08); color:var(--amber); font-size:14px; line-height:1.5; }
+
+  @media (max-width:520px) { .hero { padding-top:50px; } button { padding:0 20px; } }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation:none !important; transition:none !important; } }
 </style>
 </head>
 <body>
-  <div class="banner">Only scan websites you own. This tool performs passive analysis only.</div>
+  <div class="banner"><span class="dot"></span>Only scan websites you own. This tool performs passive analysis only.</div>
 
-  <div class="container">
-    <h1>VulnScan Lite</h1>
-    <div class="sub">On-demand web security health check</div>
+  <div class="wrap">
+    <div class="hero">
+      <div class="sonar">
+        <div class="ring"></div><div class="ring"></div><div class="ring"></div>
+        <div class="sweep"></div>
+        <span class="blip"></span><span class="blip"></span><span class="blip"></span>
+      </div>
+      <h1>VulnScan Lite</h1>
+      <p class="sub">Check how well your website protects itself.</p>
 
-    <div class="form">
-      <input id="url" type="text" placeholder="Enter website, e.g. myblog.com">
-      <button id="btn" onclick="startScan()">Scan</button>
+      <div class="form">
+        <input id="url" type="text" placeholder="Enter your website, e.g. myblog.com" autocomplete="off">
+        <button id="btn" onclick="startScan()">Scan</button>
+      </div>
+      <div id="status" class="status"></div>
     </div>
 
-    <div id="status" class="status"></div>
     <div id="result"></div>
   </div>
 
 <script>
-  const SECTION_NAMES = {
-    headers: "Security Headers",
-    ssl: "SSL / TLS",
-    cms: "CMS & Server Information"
-  };
+  const SECTION_NAMES = { headers: "Security headers", ssl: "SSL / TLS", cms: "CMS and server information" };
+  const SCAN_MESSAGES = ["Sending a ping to your site...", "Reading security headers...", "Inspecting the SSL certificate...", "Looking for CMS fingerprints...", "Almost there, building your report..."];
+  let cycleTimer = null;
 
+  function $(id) { return document.getElementById(id); }
   function el(tag, text, cls) {
     const e = document.createElement(tag);
     if (text !== undefined) e.textContent = text;
@@ -57,17 +138,47 @@
     return e;
   }
 
-  function setStatus(msg) {
-    document.getElementById("status").textContent = msg;
+  // background bubbles
+  (function () {
+    for (let i = 0; i < 16; i++) {
+      const b = el("span", undefined, "bubble");
+      const s = 6 + Math.random() * 26;
+      b.style.width = b.style.height = s + "px";
+      b.style.left = Math.random() * 100 + "vw";
+      b.style.animationDuration = 14 + Math.random() * 20 + "s";
+      b.style.animationDelay = "-" + Math.random() * 30 + "s";
+      document.body.appendChild(b);
+    }
+  })();
+
+  function setStatus(msg, isError) {
+    const s = $("status");
+    s.className = "status" + (isError ? " err" : "");
+    s.textContent = "";
+    if (msg) s.appendChild(el("span", msg, "msg"));
+  }
+
+  function startCycle() {
+    let i = 0;
+    document.body.classList.add("scanning");
+    setStatus(SCAN_MESSAGES[0]);
+    cycleTimer = setInterval(function () {
+      i = Math.min(i + 1, SCAN_MESSAGES.length - 1);
+      setStatus(SCAN_MESSAGES[i]);
+    }, 2200);
+  }
+  function stopCycle() {
+    clearInterval(cycleTimer);
+    document.body.classList.remove("scanning");
+    $("btn").disabled = false;
   }
 
   async function startScan() {
-    const url = document.getElementById("url").value.trim();
+    const url = $("url").value.trim();
     if (!url) return;
-    const btn = document.getElementById("btn");
-    btn.disabled = true;
-    document.getElementById("result").textContent = "";
-    setStatus("Starting scan...");
+    $("btn").disabled = true;
+    $("result").textContent = "";
+    startCycle();
 
     try {
       const res = await fetch("/api/scan", {
@@ -76,97 +187,105 @@
         body: JSON.stringify({ url: url })
       });
       const data = await res.json();
-      if (!res.ok) {
-        setStatus(data.error || "Something went wrong.");
-        btn.disabled = false;
-        return;
-      }
+      if (!res.ok) { stopCycle(); setStatus(data.error || "Something went wrong.", true); return; }
       poll(data.job_id);
     } catch (e) {
-      setStatus("Could not reach the server.");
-      btn.disabled = false;
+      stopCycle();
+      setStatus("Could not reach the server. Try again in a moment.", true);
     }
   }
 
   function poll(jobId) {
-    const timer = setInterval(async () => {
+    const timer = setInterval(async function () {
       try {
         const res = await fetch("/api/scan/" + jobId + "/status");
         const data = await res.json();
-        if (!res.ok) {
-          clearInterval(timer);
-          setStatus(data.error || "Scan failed.");
-          document.getElementById("btn").disabled = false;
-          return;
-        }
+        if (!res.ok) { clearInterval(timer); stopCycle(); setStatus(data.error || "Scan failed.", true); return; }
         if (data.status === "completed") {
           clearInterval(timer);
+          stopCycle();
           setStatus("");
           showResult(data.result, jobId);
-          document.getElementById("btn").disabled = false;
-        } else {
-          setStatus("Scanning... (" + data.status + ")");
         }
       } catch (e) {
         clearInterval(timer);
-        setStatus("Lost connection to the server.");
-        document.getElementById("btn").disabled = false;
+        stopCycle();
+        setStatus("Lost connection to the server.", true);
       }
     }, 2000);
   }
 
-  function showResult(r, jobId) {
-    const box = document.getElementById("result");
-    box.textContent = "";
-
-    // Gauge chart
-    const arcLength = 251.3;
-    const filled = (r.score / 100) * arcLength;
-    const color = r.score >= 80 ? "#22c55e" : r.score >= 50 ? "#f59e0b" : "#ef4444";
-    const gaugeCard = el("div", undefined, "card gauge");
-    gaugeCard.innerHTML =
-      '<svg viewBox="0 0 200 120" width="260">' +
-      '<path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="#334155" stroke-width="16" stroke-linecap="round"/>' +
-      '<path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="' + color + '" stroke-width="16" stroke-linecap="round" stroke-dasharray="' + filled + ' ' + arcLength + '"/>' +
-      '<text x="100" y="85" text-anchor="middle" font-size="36" font-weight="bold" fill="' + color + '">' + r.grade + '</text>' +
-      '<text x="100" y="108" text-anchor="middle" font-size="14" fill="#94a3b8">' + r.score + ' / 100</text>' +
-      '</svg>';
-    gaugeCard.appendChild(el("div", "Target: " + r.target + " | " + r.passed_checks + " of " + r.total_checks + " checks passed", "gauge-text"));
-
-    const dl = el("a", "Download PDF Report", "dl");
-    dl.href = "/api/scan/" + jobId + "/pdf";
-    gaugeCard.appendChild(dl);
-    box.appendChild(gaugeCard);
-
-    // Detail tables
-    Object.keys(r.details).forEach(function (key) {
-      const card = el("div", undefined, "card");
-      card.appendChild(el("h2", SECTION_NAMES[key] || key));
-      const table = el("table");
-      const head = el("tr");
-      head.appendChild(el("th", "Check"));
-      head.appendChild(el("th", "Result"));
-      table.appendChild(head);
-
-      r.details[key].results.forEach(function (item) {
-        const row = el("tr");
-        const first = el("td", item.check);
-        if (!item.passed && item.fix) {
-          first.appendChild(el("div", "How to fix: " + item.fix, "fix"));
-        }
-        row.appendChild(first);
-        row.appendChild(el("td", item.passed ? "PASSED" : "FAILED", item.passed ? "pass" : "fail"));
-        table.appendChild(row);
-      });
-
-      card.appendChild(table);
-      box.appendChild(card);
-    });
+  function countUp(node, to) {
+    const start = performance.now();
+    function frame(now) {
+      const t = Math.min((now - start) / 1800, 1);
+      const eased = 1 - Math.pow(1 - t, 3);
+      node.textContent = Math.round(to * eased) + " / 100";
+      if (t < 1) requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
   }
 
-  document.getElementById("url").addEventListener("keydown", function (e) {
-    if (e.key === "Enter") startScan();
-  });
+  function showResult(r, jobId) {
+    const box = $("result");
+    box.textContent = "";
+    const color = r.score >= 80 ? "#5eead4" : r.score >= 50 ? "#ffc46b" : "#ff6b57";
+
+    const g = el("div", undefined, "card gaugecard reveal");
+    g.innerHTML =
+      '<svg viewBox="0 0 200 120" class="gsvg">' +
+      '<path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="#12384a" stroke-width="14" stroke-linecap="round"/>' +
+      '<path class="garc" d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="' + color + '" style="color:' + color + '" stroke-width="14" stroke-linecap="round" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100"/>' +
+      '<text class="grade" x="100" y="86" text-anchor="middle" fill="' + color + '">' + r.grade + '</text>' +
+      '<text class="scoretxt" x="100" y="112" text-anchor="middle" font-size="13" fill="#8fa7b3">0 / 100</text>' +
+      '</svg>';
+    g.appendChild(el("div", r.target + "  |  " + r.passed_checks + " of " + r.total_checks + " checks passed", "meta"));
+
+    const dl = el("a", undefined, "dl");
+    dl.href = "/api/scan/" + jobId + "/pdf";
+    dl.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-5-5m5 5l5-5M5 21h14"/></svg>';
+    dl.appendChild(document.createTextNode("Download PDF report"));
+    g.appendChild(dl);
+    box.appendChild(g);
+
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        g.querySelector(".garc").style.strokeDashoffset = 100 - r.score;
+        countUp(g.querySelector(".scoretxt"), r.score);
+      });
+    });
+
+    let delay = 0.25;
+    Object.keys(r.details).forEach(function (key) {
+      const items = r.details[key].results;
+      const passed = items.filter(function (i) { return i.passed; }).length;
+      const card = el("div", undefined, "card reveal");
+      card.style.animationDelay = delay + "s";
+
+      const head = el("div", undefined, "head");
+      head.appendChild(el("h2", SECTION_NAMES[key] || key));
+      head.appendChild(el("span", passed + " of " + items.length + " passed", passed === items.length ? "chip" : "chip bad"));
+      card.appendChild(head);
+
+      items.forEach(function (item, idx) {
+        const row = el("div", undefined, "row");
+        row.style.animationDelay = (delay + 0.15 + idx * 0.08) + "s";
+        row.appendChild(el("span", item.passed ? "\u2713" : "\u2715", "ico " + (item.passed ? "ok" : "no")));
+        const body = el("div");
+        body.appendChild(el("div", item.check, "rname"));
+        if (!item.passed && item.fix) body.appendChild(el("div", "How to fix: " + item.fix, "fix"));
+        row.appendChild(body);
+        card.appendChild(row);
+      });
+
+      box.appendChild(card);
+      delay += 0.2;
+    });
+
+    g.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  $("url").addEventListener("keydown", function (e) { if (e.key === "Enter") startScan(); });
 </script>
 </body>
 </html>
