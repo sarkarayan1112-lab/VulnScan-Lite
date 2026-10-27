@@ -4,14 +4,23 @@ import threading
 import uuid
 from urllib.parse import urlparse
 
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template, request, send_file
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
+from report import build_pdf
 from scanner.cms import check_cms
 from scanner.headers import check_headers
 from scanner.ssl_check import check_ssl
 
 app = Flask(__name__)
+limiter = Limiter(get_remote_address, app=app, storage_uri="memory://")
 jobs = {}
+
+
+@app.errorhandler(429)
+def too_many_requests(e):
+    return jsonify({"error": "Too many scans. Please wait a minute and try again."}), 429
 
 
 def get_hostname(target):
@@ -92,6 +101,7 @@ def home():
 
 
 @app.route("/api/scan", methods=["POST"])
+@limiter.limit("5 per minute")
 def start_scan():
     data = request.get_json(silent=True) or {}
     target = data.get("url", "").strip()
@@ -113,6 +123,20 @@ def scan_status(job_id):
     if job is None:
         return jsonify({"error": "Job not found."}), 404
     return jsonify({"job_id": job_id, "status": job["status"], "result": job["result"]})
+
+
+@app.route("/api/scan/<job_id>/pdf")
+def scan_pdf(job_id):
+    job = jobs.get(job_id)
+    if job is None or job["status"] != "completed":
+        return jsonify({"error": "Report not ready."}), 404
+    pdf = build_pdf(job["result"])
+    return send_file(
+        pdf,
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name="vulnscan-report.pdf",
+    )
 
 
 if __name__ == "__main__":

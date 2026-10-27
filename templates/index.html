@@ -24,6 +24,7 @@
   .fail { color: #ef4444; font-weight: bold; }
   .fix { color: #fbbf24; font-size: 14px; margin-top: 4px; }
   h2 { margin-top: 0; font-size: 18px; }
+  .dl { display: inline-block; margin-top: 14px; padding: 10px 18px; background: #22c55e; color: #0f172a; border-radius: 8px; text-decoration: none; font-weight: bold; }
 </style>
 </head>
 <body>
@@ -101,7 +102,7 @@
         if (data.status === "completed") {
           clearInterval(timer);
           setStatus("");
-          showResult(data.result);
+          showResult(data.result, jobId);
           document.getElementById("btn").disabled = false;
         } else {
           setStatus("Scanning... (" + data.status + ")");
@@ -114,7 +115,7 @@
     }, 2000);
   }
 
-  function showResult(r) {
+  function showResult(r, jobId) {
     const box = document.getElementById("result");
     box.textContent = "";
 
@@ -131,6 +132,10 @@
       '<text x="100" y="108" text-anchor="middle" font-size="14" fill="#94a3b8">' + r.score + ' / 100</text>' +
       '</svg>';
     gaugeCard.appendChild(el("div", "Target: " + r.target + " | " + r.passed_checks + " of " + r.total_checks + " checks passed", "gauge-text"));
+
+    const dl = el("a", "Download PDF Report", "dl");
+    dl.href = "/api/scan/" + jobId + "/pdf";
+    gaugeCard.appendChild(dl);
     box.appendChild(gaugeCard);
 
     // Detail tables
