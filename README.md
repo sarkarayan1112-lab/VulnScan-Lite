@@ -1,6 +1,11 @@
 # VulnScan Lite
 
 > A lightweight, on-demand web security checker for websites you own.
+**Live demo:** https://vulnscan-lite-ypt7.onrender.com
+(The demo runs on a free plan, so the first visit after inactivity can take up to a minute to wake up.)
+
+**Author:** Ayan Kumar Sarkar, BCA (Cyber Security), Sharda University
+**Built for:** Persevex Cybersecurity Internship
 
 VulnScan Lite is a Flask-based passive web vulnerability scanner. It accepts a public website URL, performs a small set of low-impact security checks, presents the findings in a browser dashboard, calculates an overall grade, and generates a downloadable PDF report.
 
@@ -166,6 +171,14 @@ When the limit is exceeded, the API returns HTTP `429` with:
 ```
 
 For a multi-worker or production deployment, configure a shared rate-limit backend instead of in-memory storage.
+## Deployment
+
+The live demo is deployed on Render as a free web service from the `main` branch.
+
+- Build command: `pip install -r requirements.txt`
+- Start command: `gunicorn app:app --workers 1 --threads 4 --timeout 120`
+
+A single worker is used because scan jobs are kept in memory. With several workers, a status request could reach a worker that does not hold the job.
 
 ## Local setup
 
