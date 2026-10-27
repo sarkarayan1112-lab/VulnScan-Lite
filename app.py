@@ -4,6 +4,7 @@ import threading
 import uuid
 from urllib.parse import urlparse
 
+from werkzeug.middleware.proxy_fix import ProxyFix
 from flask import Flask, jsonify, render_template, request, send_file
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -14,6 +15,7 @@ from scanner.headers import check_headers
 from scanner.ssl_check import check_ssl
 
 app = Flask(__name__)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1)
 limiter = Limiter(get_remote_address, app=app, storage_uri="memory://")
 jobs = {}
 
